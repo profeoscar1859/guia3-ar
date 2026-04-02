@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Prototipo AR - Guía 3</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+    .panel {
+      position: fixed;
+      z-index: 10;
+      left: 12px;
+      top: 12px;
+      right: 12px;
+      max-width: 360px;
+      background: rgba(255,255,255,0.92);
+      padding: 12px 14px;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+    .credit {
+      position: fixed;
+      z-index: 10;
+      left: 12px;
+      bottom: 12px;
+      background: rgba(255,255,255,0.88);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <strong>Prototipo AR para Guía 3</strong><br>
+    Apunta la cámara al marcador Hiro. Observa el recipiente, el nivel del agua y la gráfica h(V).<br><br>
+    <strong>Pregunta guía:</strong> ¿La altura aumenta siempre al mismo ritmo cuando aumenta el volumen?
+  </div>
+
+  <div class="credit">Tema: covariación entre altura (h) y volumen (V)</div>
+
+  <a-scene
+    embedded
+    vr-mode-ui="enabled: false"
+    renderer="logarithmicDepthBuffer: true; precision: medium;"
+    arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;">
+
+    <a-marker preset="hiro">
+      <a-plane position="0 0 0" rotation="-90 0 0" width="1.9" height="1.25" color="#FFFFFF"></a-plane>
+
+      <a-text value="Recipiente que se angosta hacia arriba" position="0 0.84 0.02" align="center" color="#111111" width="3.4"></a-text>
+
+      <!-- Recipiente -->
+      <a-entity position="-0.46 0.05 0.03">
+        <a-box position="0 0.26 0" width="0.02" height="0.62" depth="0.02" color="#1F1F1F"></a-box>
+        <a-box position="0.24 0.26 0" width="0.02" height="0.62" depth="0.02" color="#1F1F1F"></a-box>
+        <a-box position="0.12 -0.04 0" width="0.26" height="0.02" depth="0.02" color="#1F1F1F"></a-box>
+        <a-box position="0.12 0.52 0" width="0.16" height="0.02" depth="0.02" color="#1F1F1F"></a-box>
+
+        <!-- Agua animada -->
+        <a-box position="0.12 0.11 0.01" width="0.20" height="0.24" depth="0.01" color="#4FC3F7"
+          animation="property: height; to: 0.52; dur: 3800; dir: alternate; loop: true; easing: easeInOutSine"
+          animation__pos="property: position; to: 0.12 0.25 0.01; dur: 3800; dir: alternate; loop: true; easing: easeInOutSine">
+        </a-box>
+      </a-entity>
+
+      <!-- Panel de gráfica -->
+      <a-plane position="0.50 0.24 0.02" width="0.88" height="0.66" color="#F7F7F7"></a-plane>
+      <a-box position="0.21 0.27 0.03" width="0.006" height="0.40" depth="0.01" color="#000000"></a-box>
+      <a-box position="0.40 0.08 0.03" width="0.38" height="0.006" depth="0.01" color="#000000"></a-box>
+      <a-text value="h" position="0.16 0.49 0.03" color="#000000" width="0.7"></a-text>
+      <a-text value="V" position="0.70 0.02 0.03" color="#000000" width="0.7"></a-text>
+
+      <!-- Curva h(V): pendiente creciente -->
+      <a-box position="0.41 0.14 0.03" width="0.10" height="0.012" depth="0.01" rotation="0 0 18" color="#1565C0"></a-box>
+      <a-box position="0.51 0.23 0.03" width="0.11" height="0.012" depth="0.01" rotation="0 0 34" color="#1565C0"></a-box>
+      <a-box position="0.62 0.36 0.03" width="0.13" height="0.012" depth="0.01" rotation="0 0 52" color="#1565C0"></a-box>
+
+      <a-text value="Si el recipiente se angosta,\nla gráfica se empina." position="0.50 -0.23 0.03" align="center" color="#111111" width="1.8"></a-text>
+    </a-marker>
+
+    <a-entity camera></a-entity>
+  </a-scene>
+</body>
+</html>
