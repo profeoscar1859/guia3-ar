@@ -2,45 +2,40 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <title>Prototipo AR - Guía 3</title>
+  <title>Guía 3 · Covariación altura-volumen</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <script src="https://aframe.io/releases/1.7.1/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   <style>
     :root{
-      --card-bg: rgba(255,255,255,.93);
-      --ink: #10212b;
-      --muted: #51626d;
-      --accent: #1f7ae0;
-      --accent-soft: #dbeafe;
-      --border: rgba(16,33,43,.10);
-      --shadow: 0 12px 28px rgba(0,0,0,.18);
-      --radius: 18px;
+      --card-bg: rgba(255,255,255,.94);
+      --ink:#10212b;
+      --muted:#51626d;
+      --accent:#1f7ae0;
+      --accent-soft:#dbeafe;
+      --border:rgba(16,33,43,.10);
+      --shadow:0 12px 28px rgba(0,0,0,.18);
+      --radius:18px;
     }
     *{box-sizing:border-box}
     html,body{margin:0;height:100%;overflow:hidden;font-family:Arial,Helvetica,sans-serif;background:#000;color:var(--ink)}
     .hud{position:fixed;inset:0;pointer-events:none;z-index:20}
-    .topbar{
-      position:fixed;left:12px;right:12px;top:12px;pointer-events:auto;
-      background:var(--card-bg);backdrop-filter: blur(8px);
-      border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);
-      padding:12px 14px;
+    .topbar,.controls{
+      position:fixed;left:12px;right:12px;pointer-events:auto;
+      background:var(--card-bg);backdrop-filter:blur(8px);
+      border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
     }
+    .topbar{top:12px;padding:12px 14px}
+    .controls{bottom:calc(12px + env(safe-area-inset-bottom));padding:12px}
     .title{font-weight:700;font-size:18px;margin:0 0 4px}
     .subtitle{font-size:13px;line-height:1.35;color:var(--muted);margin:0}
     .status-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
     .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:#f5f8fb;font-size:12px;color:var(--muted);border:1px solid var(--border)}
-    .controls{
-      position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));
-      pointer-events:auto;background:var(--card-bg);backdrop-filter: blur(8px);
-      border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);
-      padding:12px;
-    }
     .prompt{font-size:14px;line-height:1.35;margin:0 0 10px}
     .controls-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px}
     button{
       appearance:none;border:none;border-radius:14px;padding:10px 8px;font-weight:700;font-size:13px;
-      background:#eef4f8;color:var(--ink);box-shadow: inset 0 0 0 1px var(--border);cursor:pointer;
+      background:#eef4f8;color:var(--ink);box-shadow:inset 0 0 0 1px var(--border);cursor:pointer;
     }
     button.active{background:var(--accent);color:#fff;box-shadow:none}
     .secondary-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -48,9 +43,7 @@
     .secondary.primary{background:var(--accent-soft);color:#0b4d96}
     .hint{margin-top:8px;font-size:12px;line-height:1.3;color:var(--muted)}
     @media (min-width: 800px){
-      .topbar,.controls{max-width:480px}
-      .topbar{right:auto}
-      .controls{right:auto}
+      .topbar,.controls{max-width:480px;right:auto}
     }
   </style>
 </head>
@@ -98,7 +91,6 @@
       <a-entity id="bottleWrap" position="-0.43 0.01 0.03">
         <a-plane position="0.10 0.28 -0.005" width="0.42" height="0.70" color="#ffffff" opacity="0.58"></a-plane>
 
-        <!-- Recto -->
         <a-entity id="shapeRecto">
           <a-box position="0.00 0.28 0" width="0.02" height="0.62" depth="0.02" color="#1f2937"></a-box>
           <a-box position="0.24 0.28 0" width="0.02" height="0.62" depth="0.02" color="#1f2937"></a-box>
@@ -106,7 +98,6 @@
           <a-box position="0.12 0.58 0" width="0.26" height="0.02" depth="0.02" color="#1f2937"></a-box>
         </a-entity>
 
-        <!-- Se ensancha -->
         <a-entity id="shapeAncho" visible="false">
           <a-box position="0.03 0.28 0" width="0.02" height="0.64" depth="0.02" rotation="0 0 -10" color="#1f2937"></a-box>
           <a-box position="0.21 0.28 0" width="0.02" height="0.64" depth="0.02" rotation="0 0 10" color="#1f2937"></a-box>
@@ -114,7 +105,6 @@
           <a-box position="0.12 0.60 0" width="0.34" height="0.02" depth="0.02" color="#1f2937"></a-box>
         </a-entity>
 
-        <!-- Se angosta -->
         <a-entity id="shapeAngosto" visible="false">
           <a-box position="0.04 0.28 0" width="0.02" height="0.64" depth="0.02" rotation="0 0 10" color="#1f2937"></a-box>
           <a-box position="0.20 0.28 0" width="0.02" height="0.64" depth="0.02" rotation="0 0 -10" color="#1f2937"></a-box>
@@ -122,7 +112,6 @@
           <a-box position="0.12 0.60 0" width="0.18" height="0.02" depth="0.02" color="#1f2937"></a-box>
         </a-entity>
 
-        <!-- Agua -->
         <a-box id="water" position="0.12 0.10 0.012" width="0.20" height="0.22" depth="0.01" color="#58b6ff" opacity="0.92"></a-box>
       </a-entity>
 
@@ -132,22 +121,16 @@
         <a-box position="-0.08 -0.10 0" width="0.42" height="0.006" depth="0.01" color="#111827"></a-box>
         <a-text value="h" position="-0.33 0.33 0.01" color="#111827" width="0.6"></a-text>
         <a-text value="V" position="0.18 -0.16 0.01" color="#111827" width="0.6"></a-text>
+        <a-text value="Gráfica aproximada" position="0 0.42 0.01" align="center" color="#10212b" width="1.6"></a-text>
 
-        <a-text id="graphLabel" value="Gráfica aproximada" position="0 0.42 0.01" align="center" color="#10212b" width="1.6"></a-text>
-
-        <!-- Recta -->
         <a-entity id="graphRecto">
           <a-box position="-0.01 0.07 0.01" width="0.44" height="0.012" depth="0.01" rotation="0 0 35" color="#1f7ae0"></a-box>
         </a-entity>
-
-        <!-- Se aplana -->
         <a-entity id="graphAncho" visible="false">
           <a-box position="-0.15 -0.03 0.01" width="0.16" height="0.012" depth="0.01" rotation="0 0 44" color="#1f7ae0"></a-box>
           <a-box position="-0.01 0.10 0.01" width="0.18" height="0.012" depth="0.01" rotation="0 0 24" color="#1f7ae0"></a-box>
           <a-box position="0.15 0.18 0.01" width="0.20" height="0.012" depth="0.01" rotation="0 0 11" color="#1f7ae0"></a-box>
         </a-entity>
-
-        <!-- Se empina -->
         <a-entity id="graphAngosto" visible="false">
           <a-box position="-0.15 -0.04 0.01" width="0.16" height="0.012" depth="0.01" rotation="0 0 11" color="#1f7ae0"></a-box>
           <a-box position="-0.01 0.06 0.01" width="0.18" height="0.012" depth="0.01" rotation="0 0 28" color="#1f7ae0"></a-box>
@@ -165,71 +148,62 @@
   </a-scene>
 
   <script>
-    const state = {
-      case: 'recto',
-      graphVisible: false,
-      hintVisible: false
-    };
+    const state = { currentCase: 'recto', graphVisible: false, hintVisible: false };
 
     const cases = {
       recto: {
         title: 'Recipiente recto',
         chip: 'Caso actual: recipiente recto',
         hint: 'Pista: si el recipiente mantiene el mismo ancho, la altura aumenta a ritmo constante.',
-        waterWidth: 0.20,
-        waterAnimHeight: 0.52,
-        waterStartY: 0.10,
-        waterEndY: 0.25
+        waterWidth: 0.20, waterAnimHeight: 0.52, waterStartY: 0.10, waterEndY: 0.25
       },
       ancho: {
         title: 'Recipiente que se ensancha hacia arriba',
         chip: 'Caso actual: recipiente que se ensancha',
         hint: 'Pista: cuando el recipiente se hace más ancho, la misma cantidad de agua eleva menos la altura.',
-        waterWidth: 0.16,
-        waterAnimHeight: 0.48,
-        waterStartY: 0.10,
-        waterEndY: 0.23
+        waterWidth: 0.16, waterAnimHeight: 0.48, waterStartY: 0.10, waterEndY: 0.23
       },
       angosto: {
         title: 'Recipiente que se angosta hacia arriba',
         chip: 'Caso actual: recipiente que se angosta',
         hint: 'Pista: cuando el recipiente se hace más angosto, la misma cantidad de agua eleva más la altura.',
-        waterWidth: 0.28,
-        waterAnimHeight: 0.56,
-        waterStartY: 0.10,
-        waterEndY: 0.27
+        waterWidth: 0.28, waterAnimHeight: 0.56, waterStartY: 0.10, waterEndY: 0.27
       }
     };
 
+    function byId(id){ return document.getElementById(id); }
+
     const el = {
-      btnRecto: document.getElementById('btnRecto'),
-      btnAncho: document.getElementById('btnAncho'),
-      btnAngosto: document.getElementById('btnAngosto'),
-      toggleGraph: document.getElementById('toggleGraph'),
-      toggleHint: document.getElementById('toggleHint'),
-      hintText: document.getElementById('hintText'),
-      caseChip: document.getElementById('caseChip'),
-      arTitle: document.getElementById('arTitle'),
-      arHint: document.getElementById('arHint'),
-      shapeRecto: document.getElementById('shapeRecto'),
-      shapeAncho: document.getElementById('shapeAncho'),
-      shapeAngosto: document.getElementById('shapeAngosto'),
-      graphRecto: document.getElementById('graphRecto'),
-      graphAncho: document.getElementById('graphAncho'),
-      graphAngosto: document.getElementById('graphAngosto'),
-      graphWrap: document.getElementById('graphWrap'),
-      hintWrap: document.getElementById('hintWrap'),
-      water: document.getElementById('water')
+      btnRecto: byId('btnRecto'),
+      btnAncho: byId('btnAncho'),
+      btnAngosto: byId('btnAngosto'),
+      toggleGraph: byId('toggleGraph'),
+      toggleHint: byId('toggleHint'),
+      hintText: byId('hintText'),
+      caseChip: byId('caseChip'),
+      arTitle: byId('arTitle'),
+      arHint: byId('arHint'),
+      shapeRecto: byId('shapeRecto'),
+      shapeAncho: byId('shapeAncho'),
+      shapeAngosto: byId('shapeAngosto'),
+      graphRecto: byId('graphRecto'),
+      graphAncho: byId('graphAncho'),
+      graphAngosto: byId('graphAngosto'),
+      graphWrap: byId('graphWrap'),
+      hintWrap: byId('hintWrap'),
+      water: byId('water')
     };
+
+    function showOnly(targetKey, mapping){
+      Object.keys(mapping).forEach((key) => {
+        mapping[key].setAttribute('visible', key === targetKey);
+      });
+    }
 
     function setActiveButton(name){
       el.btnRecto.classList.toggle('active', name === 'recto');
       el.btnAncho.classList.toggle('active', name === 'ancho');
       el.btnAngosto.classList.toggle('active', name === 'angosto');
-    }
-
-    function showOnly(target, map){
-      Object.entries(map).forEach(([key, node]) => node.setAttribute('visible', key === target));
     }
 
     function updateWater(cfg){
@@ -238,14 +212,14 @@
       el.water.setAttribute('position', `0.12 ${cfg.waterStartY} 0.012`);
       el.water.removeAttribute('animation');
       el.water.removeAttribute('animation__pos');
-      setTimeout(() => {
+      window.setTimeout(() => {
         el.water.setAttribute('animation', `property: height; to: ${cfg.waterAnimHeight}; dur: 3200; dir: alternate; loop: true; easing: easeInOutSine`);
         el.water.setAttribute('animation__pos', `property: position; to: 0.12 ${cfg.waterEndY} 0.012; dur: 3200; dir: alternate; loop: true; easing: easeInOutSine`);
-      }, 20);
+      }, 30);
     }
 
     function applyCase(name){
-      state.case = name;
+      state.currentCase = name;
       const cfg = cases[name];
       setActiveButton(name);
       el.caseChip.textContent = cfg.chip;
@@ -253,18 +227,8 @@
       el.hintText.textContent = cfg.hint.replace('Pista: ', '');
       el.arHint.setAttribute('value', cfg.hint);
 
-      showOnly(name, {
-        recto: el.shapeRecto,
-        ancho: el.shapeAncho,
-        angosto: el.shapeAngosto
-      });
-
-      showOnly(name, {
-        recto: el.graphRecto,
-        ancho: el.graphAncho,
-        angosto: el.graphAngosto
-      });
-
+      showOnly(name, { recto: el.shapeRecto, ancho: el.shapeAncho, angosto: el.shapeAngosto });
+      showOnly(name, { recto: el.graphRecto, ancho: el.graphAncho, angosto: el.graphAngosto });
       updateWater(cfg);
     }
 
