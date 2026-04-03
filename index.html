@@ -2,70 +2,402 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Diagnóstico AR - Hiro</title>
+  <title>Guía 3 · Covariación altura-volumen</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
+    body{
+      margin:0;
+      overflow:hidden;
       font-family: Arial, sans-serif;
+      background:#000;
     }
 
-    .panel {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 20;
-      background: rgba(255,255,255,0.94);
-      padding: 12px 14px;
-      border-radius: 12px;
-      max-width: 320px;
-      line-height: 1.35;
-      font-size: 14px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+    .panel-top{
+      position:fixed;
+      top:12px;
+      left:12px;
+      right:12px;
+      z-index:20;
+      background:rgba(255,255,255,0.95);
+      border-radius:18px;
+      padding:16px 18px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.18);
     }
 
-    .ok {
-      color: #0a7a2f;
-      font-weight: 700;
+    .panel-top h1{
+      margin:0 0 8px 0;
+      font-size:18px;
+      color:#1f2937;
     }
 
-    .no {
-      color: #b42318;
-      font-weight: 700;
+    .panel-top p{
+      margin:0;
+      font-size:14px;
+      line-height:1.4;
+      color:#4b5563;
+    }
+
+    .estado{
+      margin-top:8px;
+      font-size:13px;
+      color:#374151;
+    }
+
+    .ok{
+      color:#0a7a2f;
+      font-weight:700;
+    }
+
+    .no{
+      color:#b42318;
+      font-weight:700;
+    }
+
+    .panel-bottom{
+      position:fixed;
+      left:12px;
+      right:12px;
+      bottom:12px;
+      z-index:20;
+      background:rgba(255,255,255,0.95);
+      border-radius:18px;
+      padding:14px 14px 12px 14px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.18);
+    }
+
+    .pregunta{
+      font-size:14px;
+      line-height:1.35;
+      color:#1f2937;
+      margin-bottom:12px;
+    }
+
+    .fila{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+
+    button{
+      border:none;
+      border-radius:16px;
+      padding:12px 16px;
+      font-size:14px;
+      font-weight:700;
+      cursor:pointer;
+      background:#e9eef5;
+      color:#1f2937;
+      box-shadow: inset 0 0 0 1px rgba(31,41,55,0.12);
+    }
+
+    button.activo{
+      background:#2f7de1;
+      color:#fff;
+      box-shadow:none;
+    }
+
+    button.secundario{
+      background:#dce9fb;
+      color:#134b9b;
+    }
+
+    .texto-aux{
+      font-size:13px;
+      line-height:1.35;
+      color:#4b5563;
+      min-height:18px;
     }
   </style>
 </head>
 <body>
-  <div class="panel">
-    <strong>Diagnóstico AR</strong><br>
-    Estado del marcador: <span id="estado" class="no">no detectado</span><br><br>
-    Si funciona, debes ver un <strong>plano rojo</strong> sobre el marcador Hiro.
+
+  <div class="panel-top">
+    <h1>Guía 3 · Covariación altura-volumen</h1>
+    <p>
+      Apunta la cámara al marcador Hiro. Observa el recipiente, piensa cómo cambia la altura
+      cuando aumenta el volumen y luego revela la gráfica para comparar tu predicción.
+    </p>
+    <div class="estado">
+      Estado del marcador:
+      <span id="estado" class="no">no detectado</span>
+    </div>
+  </div>
+
+  <div class="panel-bottom">
+    <div class="pregunta">
+      <strong>Pregunta guía:</strong>
+      ¿la altura <em>h</em> aumenta siempre al mismo ritmo cuando aumenta el volumen <em>V</em>?
+    </div>
+
+    <div class="fila">
+      <button id="btnRecto" class="activo">Recto</button>
+      <button id="btnEnsancha">Se ensancha</button>
+      <button id="btnAngosta">Se angosta</button>
+    </div>
+
+    <div class="fila">
+      <button id="btnGrafica" class="secundario">Mostrar gráfica</button>
+      <button id="btnPista">Ver pista</button>
+    </div>
+
+    <div id="textoAux" class="texto-aux">
+      Primero predice: ¿la altura sube siempre igual o cambia su ritmo?
+    </div>
   </div>
 
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
     <a-marker id="hiroMarker" preset="hiro">
+
+      <!-- Panel general -->
       <a-plane
-        position="0 0 0"
-        rotation="-90 0 0"
-        width="1"
-        height="1"
-        color="red"
-        opacity="0.85">
+        position="0 0.75 0"
+        width="2.0"
+        height="1.25"
+        color="#ffffff"
+        opacity="0.95">
       </a-plane>
+
+      <!-- Título interno -->
+      <a-text
+        value="Relacion entre recipiente y grafica h(V)"
+        position="0 1.24 0.02"
+        align="center"
+        color="#1f2937"
+        width="3.2">
+      </a-text>
+
+      <!-- Etiquetas -->
+      <a-text
+        value="recipiente"
+        position="-0.52 0.22 0.02"
+        align="center"
+        color="#4b5563"
+        width="1.2">
+      </a-text>
+
+      <a-text
+        value="grafica"
+        position="0.48 0.22 0.02"
+        align="center"
+        color="#4b5563"
+        width="1.2">
+      </a-text>
+
+      <!-- ========================= -->
+      <!-- CASO 1: RECTO -->
+      <!-- ========================= -->
+      <a-entity id="caseRecto">
+
+        <!-- recipiente -->
+        <a-box position="-0.55 0.70 0.03" width="0.02" height="0.42" depth="0.01" color="#111827"></a-box>
+        <a-box position="-0.37 0.70 0.03" width="0.02" height="0.42" depth="0.01" color="#111827"></a-box>
+        <a-box position="-0.46 0.50 0.03" width="0.20" height="0.02" depth="0.01" color="#111827"></a-box>
+
+        <!-- agua -->
+        <a-box
+          position="-0.46 0.63 0.035"
+          width="0.15"
+          height="0.22"
+          depth="0.008"
+          color="#4fc3f7"
+          opacity="0.90"
+          animation="property: height; dir: alternate; dur: 2500; loop: true; to: 0.34"
+          animation__pos="property: position; dir: alternate; dur: 2500; loop: true; to: -0.46 0.69 0.035">
+        </a-box>
+
+        <!-- ejes -->
+        <a-box position="0.28 0.68 0.03" width="0.01" height="0.34" depth="0.01" color="#111827"></a-box>
+        <a-box position="0.39 0.51 0.03" width="0.23" height="0.01" depth="0.01" color="#111827"></a-box>
+        <a-text value="h" position="0.22 0.87 0.03" color="#111827" width="0.6"></a-text>
+        <a-text value="V" position="0.53 0.44 0.03" color="#111827" width="0.6"></a-text>
+
+        <!-- gráfica recta -->
+        <a-entity id="graphRecto" visible="false">
+          <a-box position="0.42 0.64 0.035" width="0.24" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 35"></a-box>
+        </a-entity>
+
+      </a-entity>
+
+      <!-- ========================= -->
+      <!-- CASO 2: SE ENSANCHA -->
+      <!-- ========================= -->
+      <a-entity id="caseEnsancha" visible="false">
+
+        <!-- recipiente -->
+        <a-box position="-0.56 0.72 0.03" width="0.02" height="0.40" depth="0.01" color="#111827" rotation="0 0 -18"></a-box>
+        <a-box position="-0.36 0.72 0.03" width="0.02" height="0.40" depth="0.01" color="#111827" rotation="0 0 18"></a-box>
+        <a-box position="-0.46 0.50 0.03" width="0.16" height="0.02" depth="0.01" color="#111827"></a-box>
+
+        <!-- agua -->
+        <a-box
+          position="-0.46 0.61 0.035"
+          width="0.12"
+          height="0.18"
+          depth="0.008"
+          color="#4fc3f7"
+          opacity="0.90"
+          animation="property: height; dir: alternate; dur: 2500; loop: true; to: 0.28"
+          animation__pos="property: position; dir: alternate; dur: 2500; loop: true; to: -0.46 0.66 0.035">
+        </a-box>
+
+        <!-- ejes -->
+        <a-box position="0.28 0.68 0.03" width="0.01" height="0.34" depth="0.01" color="#111827"></a-box>
+        <a-box position="0.39 0.51 0.03" width="0.23" height="0.01" depth="0.01" color="#111827"></a-box>
+        <a-text value="h" position="0.22 0.87 0.03" color="#111827" width="0.6"></a-text>
+        <a-text value="V" position="0.53 0.44 0.03" color="#111827" width="0.6"></a-text>
+
+        <!-- gráfica que se aplana -->
+        <a-entity id="graphEnsancha" visible="false">
+          <a-box position="0.34 0.59 0.035" width="0.10" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 55"></a-box>
+          <a-box position="0.44 0.67 0.035" width="0.10" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 30"></a-box>
+          <a-box position="0.52 0.72 0.035" width="0.08" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 12"></a-box>
+        </a-entity>
+
+      </a-entity>
+
+      <!-- ========================= -->
+      <!-- CASO 3: SE ANGOSTA -->
+      <!-- ========================= -->
+      <a-entity id="caseAngosta" visible="false">
+
+        <!-- recipiente -->
+        <a-box position="-0.55 0.72 0.03" width="0.02" height="0.40" depth="0.01" color="#111827" rotation="0 0 18"></a-box>
+        <a-box position="-0.37 0.72 0.03" width="0.02" height="0.40" depth="0.01" color="#111827" rotation="0 0 -18"></a-box>
+        <a-box position="-0.46 0.50 0.03" width="0.24" height="0.02" depth="0.01" color="#111827"></a-box>
+
+        <!-- agua -->
+        <a-box
+          position="-0.46 0.61 0.035"
+          width="0.18"
+          height="0.18"
+          depth="0.008"
+          color="#4fc3f7"
+          opacity="0.90"
+          animation="property: height; dir: alternate; dur: 2500; loop: true; to: 0.32"
+          animation__pos="property: position; dir: alternate; dur: 2500; loop: true; to: -0.46 0.68 0.035">
+        </a-box>
+
+        <!-- ejes -->
+        <a-box position="0.28 0.68 0.03" width="0.01" height="0.34" depth="0.01" color="#111827"></a-box>
+        <a-box position="0.39 0.51 0.03" width="0.23" height="0.01" depth="0.01" color="#111827"></a-box>
+        <a-text value="h" position="0.22 0.87 0.03" color="#111827" width="0.6"></a-text>
+        <a-text value="V" position="0.53 0.44 0.03" color="#111827" width="0.6"></a-text>
+
+        <!-- gráfica que se empina -->
+        <a-entity id="graphAngosta" visible="false">
+          <a-box position="0.35 0.57 0.035" width="0.08" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 12"></a-box>
+          <a-box position="0.43 0.63 0.035" width="0.09" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 30"></a-box>
+          <a-box position="0.52 0.74 0.035" width="0.11" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 55"></a-box>
+        </a-entity>
+
+      </a-entity>
+
     </a-marker>
 
     <a-entity camera></a-entity>
   </a-scene>
 
   <script>
+    const estado = document.getElementById("estado");
+    const textoAux = document.getElementById("textoAux");
+
+    const btnRecto = document.getElementById("btnRecto");
+    const btnEnsancha = document.getElementById("btnEnsancha");
+    const btnAngosta = document.getElementById("btnAngosta");
+    const btnGrafica = document.getElementById("btnGrafica");
+    const btnPista = document.getElementById("btnPista");
+
+    const caseRecto = document.getElementById("caseRecto");
+    const caseEnsancha = document.getElementById("caseEnsancha");
+    const caseAngosta = document.getElementById("caseAngosta");
+
+    const graphRecto = document.getElementById("graphRecto");
+    const graphEnsancha = document.getElementById("graphEnsancha");
+    const graphAngosta = document.getElementById("graphAngosta");
+
+    let casoActual = "recto";
+    let graficaVisible = false;
+    let pistaVisible = false;
+
+    function actualizarBotonesCaso() {
+      btnRecto.classList.toggle("activo", casoActual === "recto");
+      btnEnsancha.classList.toggle("activo", casoActual === "ensancha");
+      btnAngosta.classList.toggle("activo", casoActual === "angosta");
+    }
+
+    function actualizarEscena() {
+      caseRecto.setAttribute("visible", casoActual === "recto");
+      caseEnsancha.setAttribute("visible", casoActual === "ensancha");
+      caseAngosta.setAttribute("visible", casoActual === "angosta");
+
+      graphRecto.setAttribute("visible", graficaVisible && casoActual === "recto");
+      graphEnsancha.setAttribute("visible", graficaVisible && casoActual === "ensancha");
+      graphAngosta.setAttribute("visible", graficaVisible && casoActual === "angosta");
+    }
+
+    function actualizarTexto() {
+      if (!pistaVisible) {
+        if (!graficaVisible) {
+          textoAux.textContent = "Primero predice: ¿la altura sube siempre igual o cambia su ritmo?";
+        } else {
+          textoAux.textContent = "Compara ahora tu predicción con la gráfica mostrada.";
+        }
+        return;
+      }
+
+      if (casoActual === "recto") {
+        textoAux.textContent = "Pista: si el recipiente mantiene el mismo ancho, la altura aumenta a ritmo constante.";
+      } else if (casoActual === "ensancha") {
+        textoAux.textContent = "Pista: si el recipiente se hace más ancho, la altura sube cada vez más lentamente.";
+      } else {
+        textoAux.textContent = "Pista: si el recipiente se angosta, la altura sube cada vez más rápido.";
+      }
+    }
+
+    btnRecto.addEventListener("click", () => {
+      casoActual = "recto";
+      pistaVisible = false;
+      actualizarBotonesCaso();
+      actualizarEscena();
+      actualizarTexto();
+    });
+
+    btnEnsancha.addEventListener("click", () => {
+      casoActual = "ensancha";
+      pistaVisible = false;
+      actualizarBotonesCaso();
+      actualizarEscena();
+      actualizarTexto();
+    });
+
+    btnAngosta.addEventListener("click", () => {
+      casoActual = "angosta";
+      pistaVisible = false;
+      actualizarBotonesCaso();
+      actualizarEscena();
+      actualizarTexto();
+    });
+
+    btnGrafica.addEventListener("click", () => {
+      graficaVisible = !graficaVisible;
+      btnGrafica.textContent = graficaVisible ? "Ocultar gráfica" : "Mostrar gráfica";
+      actualizarEscena();
+      actualizarTexto();
+    });
+
+    btnPista.addEventListener("click", () => {
+      pistaVisible = !pistaVisible;
+      btnPista.textContent = pistaVisible ? "Ocultar pista" : "Ver pista";
+      actualizarTexto();
+    });
+
     window.addEventListener("load", function () {
       const marker = document.querySelector("#hiroMarker");
-      const estado = document.querySelector("#estado");
 
       marker.addEventListener("markerFound", function () {
         estado.textContent = "detectado";
@@ -76,6 +408,10 @@
         estado.textContent = "no detectado";
         estado.className = "no";
       });
+
+      actualizarBotonesCaso();
+      actualizarEscena();
+      actualizarTexto();
     });
   </script>
 </body>
