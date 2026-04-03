@@ -2,44 +2,67 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>Prueba mínima AR</title>
+  <title>Diagnóstico AR - Hiro</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
 
   <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
 
   <style>
     body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
-    .info {
+    .panel {
       position: fixed;
       top: 12px;
       left: 12px;
-      z-index: 10;
-      background: rgba(255,255,255,0.92);
-      padding: 10px 14px;
+      z-index: 20;
+      background: rgba(255,255,255,0.94);
+      padding: 12px 14px;
       border-radius: 12px;
       max-width: 320px;
-      font-size: 14px;
       line-height: 1.35;
+      font-size: 14px;
     }
+    .ok { color: #0a7a2f; font-weight: 700; }
+    .no { color: #b42318; font-weight: 700; }
   </style>
 </head>
 <body>
-  <div class="info">
-    <strong>Prueba mínima AR</strong><br>
-    Si esto funciona, debes ver un cubo rojo sobre el marcador Hiro.
+  <div class="panel">
+    <strong>Diagnóstico AR</strong><br>
+    Estado del marcador: <span id="estado" class="no">no detectado</span><br><br>
+    Si funciona, debes ver un <strong>plano rojo</strong> sobre el marcador Hiro.
   </div>
 
-  <a-scene
-    embedded
-    vr-mode-ui="enabled: false"
-    arjs="sourceType: webcam; debugUIEnabled: false;">
-
-    <a-marker preset="hiro">
-      <a-box position="0 0.5 0" material="color: red;"></a-box>
+  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <a-marker id="hiroMarker" preset="hiro">
+      <a-plane
+        position="0 0 0"
+        rotation="-90 0 0"
+        width="1"
+        height="1"
+        color="red"
+        opacity="0.85">
+      </a-plane>
     </a-marker>
 
     <a-entity camera></a-entity>
   </a-scene>
+
+  <script>
+    window.addEventListener("load", function () {
+      const marker = document.querySelector("#hiroMarker");
+      const estado = document.querySelector("#estado");
+
+      marker.addEventListener("markerFound", function () {
+        estado.textContent = "detectado";
+        estado.className = "ok";
+      });
+
+      marker.addEventListener("markerLost", function () {
+        estado.textContent = "no detectado";
+        estado.className = "no";
+      });
+    });
+  </script>
 </body>
 </html>
