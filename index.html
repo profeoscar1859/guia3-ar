@@ -1,325 +1,338 @@
-import React, { useMemo, useState } from "react";
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guía 3 · Covariación altura-volumen</title>
+  <style>
+    :root{
+      --bg:#f1f5f9;
+      --card:#ffffff;
+      --text:#0f172a;
+      --muted:#475569;
+      --border:#dbe3ee;
+      --primary:#2563eb;
+      --primary-soft:#dbeafe;
+      --accent:#059669;
+      --accent-soft:#d1fae5;
+      --warning:#92400e;
+      --warning-soft:#fef3c7;
+      --shadow:0 10px 30px rgba(15,23,42,.08);
+      --radius:24px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial, Helvetica, sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1180px;margin:0 auto;padding:24px}
+    .hero,.main-card,.side-card{background:var(--card);border:1px solid var(--border);box-shadow:var(--shadow);border-radius:var(--radius)}
+    .hero{padding:24px 28px;margin-bottom:22px}
+    .hero h1{margin:0 0 10px 0;font-size:34px}
+    .hero p{margin:0;max-width:840px;color:var(--muted);line-height:1.6}
+    .layout{display:grid;grid-template-columns:2fr 1fr;gap:22px}
+    .main-card{padding:22px}
+    .side-card{padding:22px;display:flex;flex-direction:column;gap:16px}
+    .row{display:flex;flex-wrap:wrap;gap:10px}
+    .btn{border:none;border-radius:18px;padding:12px 16px;font-size:15px;font-weight:700;background:#e2e8f0;color:#334155;cursor:pointer;transition:.2s}
+    .btn:hover{filter:brightness(.98)}
+    .btn.active{background:var(--primary);color:#fff}
+    .btn.secondary{background:var(--primary-soft);color:#1d4ed8}
+    .btn.pred{background:#fff;border:1px solid #cbd5e1}
+    .btn.pred.active{background:var(--accent);border-color:var(--accent);color:#fff}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
+    .panel{border:1px solid var(--border);border-radius:22px;padding:18px;background:#fff}
+    .panel h2{margin:0 0 12px 0;font-size:21px}
+    .surface{height:360px;border-radius:20px;background:#f8fafc;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+    .control{margin-top:14px}
+    .control .label-line{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-bottom:8px}
+    input[type=range]{width:100%}
+    .block{border-radius:20px;padding:16px;border:1px solid var(--border);background:#fff}
+    .block h3{margin:0 0 8px 0;font-size:18px}
+    .block p{margin:0;color:var(--muted);line-height:1.6}
+    .block ul{margin:8px 0 0 18px;padding:0;color:var(--muted);line-height:1.7}
+    .block.warning{background:var(--warning-soft);border-color:#fcd34d}
+    .block.accent{background:var(--accent-soft);border-color:#6ee7b7}
+    .caption{font-size:13px;color:var(--muted);margin-top:8px}
+    .prediction-box{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    .graph-note{font-size:14px;color:var(--muted);line-height:1.6}
+    .case-tag{display:inline-block;padding:8px 12px;border-radius:999px;background:#eff6ff;color:#1d4ed8;font-size:14px;font-weight:700}
+    @media (max-width: 980px){
+      .layout{grid-template-columns:1fr}
+      .grid{grid-template-columns:1fr}
+      .hero h1{font-size:28px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Recurso digital alternativo · Guía 3</h1>
+      <p>
+        Simulador web para analizar la covariación entre altura y volumen sin realidad aumentada. Primero se predice la forma de la gráfica; después se revela y se compara entre tres recipientes.
+      </p>
+    </section>
 
-const CASES = {
-  recto: {
-    label: "Recipiente recto",
-    hint: "Si el recipiente mantiene el mismo ancho, incrementos iguales de volumen producen incrementos iguales de altura.",
-    explanation:
-      "Aquí conviene preguntar si la altura sube siempre igual. Antes de revelar la gráfica, formula una predicción.",
-    graphType: "line",
-  },
-  ensancha: {
-    label: "Se ensancha hacia arriba",
-    hint: "Si el recipiente se hace mucho más ancho arriba, la altura sube cada vez más lentamente y la gráfica se va aplanando con fuerza.",
-    explanation:
-      "Observa que en la parte superior el recipiente gana ancho. Eso debe notarse en una gráfica claramente diferente de la lineal.",
-    graphType: "concaveDown",
-  },
-  angosta: {
-    label: "Se angosta hacia arriba",
-    hint: "Si el recipiente se hace mucho más angosto arriba, pequeñas variaciones de volumen producen aumentos cada vez mayores de altura.",
-    explanation:
-      "Observa que en la parte superior el recipiente pierde ancho. Eso debe notarse en una gráfica claramente más empinada al final.",
-    graphType: "concaveUp",
-  },
-};
-
-function Button({ active, children, onClick, secondary = false }) {
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        "rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all",
-        active
-          ? "bg-blue-600 text-white shadow"
-          : secondary
-          ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-          : "bg-slate-200 text-slate-700 hover:bg-slate-300",
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
-}
-
-function PredictionButton({ active, children, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        "rounded-2xl px-3 py-2 text-sm font-semibold transition-all border",
-        active
-          ? "bg-emerald-600 text-white border-emerald-600"
-          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50",
-      ].join(" ")}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Vessel({ type, volume }) {
-  const level = 12 + volume * 1.7;
-
-  if (type === "recto") {
-    return (
-      <div className="relative h-72 w-32 mx-auto">
-        <svg viewBox="0 0 140 260" className="h-full w-full overflow-visible">
-          <path
-            d="M35 20 L35 220 L105 220 L105 20"
-            fill="none"
-            stroke="#334155"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-          <clipPath id="clip-recto">
-            <path d="M39 20 L39 216 L101 216 L101 20 Z" />
-          </clipPath>
-          <rect
-            x="39"
-            y={216 - level}
-            width="62"
-            height={level}
-            fill="#38bdf8"
-            opacity="0.8"
-            clipPath="url(#clip-recto)"
-          />
-        </svg>
-      </div>
-    );
-  }
-
-  if (type === "ensancha") {
-    return (
-      <div className="relative h-72 w-44 mx-auto">
-        <svg viewBox="0 0 180 260" className="h-full w-full overflow-visible">
-          <path
-            d="M84 25 L54 220 L126 220 L96 25"
-            fill="none"
-            stroke="#334155"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-          <clipPath id="clip-ensancha">
-            <path d="M82 25 L58 216 L122 216 L98 25 Z" />
-          </clipPath>
-          <rect
-            x="46"
-            y={216 - level}
-            width="92"
-            height={level}
-            fill="#38bdf8"
-            opacity="0.8"
-            clipPath="url(#clip-ensancha)"
-          />
-        </svg>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative h-72 w-40 mx-auto">
-      <svg viewBox="0 0 180 260" className="h-full w-full overflow-visible">
-        <path
-          d="M48 25 L72 220 L108 220 L132 25"
-          fill="none"
-          stroke="#334155"
-          strokeWidth="8"
-          strokeLinecap="round"
-        />
-        <clipPath id="clip-angosta">
-          <path d="M52 25 L74 216 L106 216 L128 25 Z" />
-        </clipPath>
-        <rect
-          x="46"
-          y={216 - level}
-          width="88"
-          height={level}
-          fill="#38bdf8"
-          opacity="0.8"
-          clipPath="url(#clip-angosta)"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function Graph({ type, visible, volume, prediction }) {
-  const point = useMemo(() => {
-    const x = 55 + volume * 1.6;
-    let y = 0;
-    if (type === "line") y = 175 - volume * 1.2;
-    if (type === "concaveDown") y = 180 - Math.sqrt(volume + 3) * 18;
-    if (type === "concaveUp") y = 178 - Math.pow(volume / 10, 2.05) * 4.3;
-    return { x, y };
-  }, [type, volume]);
-
-  const linePath = "M55 175 L245 55";
-  const downPath = "M55 175 C80 105, 170 62, 245 58";
-  const upPath = "M55 176 C148 174, 195 132, 245 55";
-  const path = type === "line" ? linePath : type === "concaveDown" ? downPath : upPath;
-
-  const predictionText =
-    prediction === "lineal"
-      ? "Predicción elegida: gráfica lineal"
-      : prediction === "aplana"
-      ? "Predicción elegida: gráfica que se aplana"
-      : prediction === "empina"
-      ? "Predicción elegida: gráfica que se empina"
-      : "Predice primero la forma de la gráfica";
-
-  return (
-    <div className="h-72 rounded-2xl bg-slate-50 p-4">
-      <svg viewBox="0 0 300 220" className="h-full w-full">
-        <line x1="40" y1="180" x2="40" y2="20" stroke="#334155" strokeWidth="3" />
-        <line x1="40" y1="180" x2="270" y2="180" stroke="#334155" strokeWidth="3" />
-        <text x="18" y="28" className="fill-slate-700 text-[18px] font-semibold">h</text>
-        <text x="275" y="198" className="fill-slate-700 text-[18px] font-semibold">V</text>
-
-        {visible ? (
-          <>
-            <path d={path} fill="none" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
-            <circle cx={point.x} cy={point.y} r="6" fill="#0f172a" />
-            <line x1={point.x} y1={point.y} x2={point.x} y2="180" stroke="#94a3b8" strokeDasharray="5 5" />
-            <line x1="40" y1={point.y} x2={point.x} y2={point.y} stroke="#94a3b8" strokeDasharray="5 5" />
-          </>
-        ) : (
-          <>
-            <text x="78" y="92" className="fill-slate-400 text-[16px] font-medium">
-              {predictionText}
-            </text>
-            <text x="74" y="120" className="fill-slate-400 text-[14px]">
-              Luego pulsa “Mostrar gráfica”
-            </text>
-          </>
-        )}
-      </svg>
-    </div>
-  );
-}
-
-export default function RecursoDigitalGuia3() {
-  const [caseKey, setCaseKey] = useState("recto");
-  const [showGraph, setShowGraph] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-  const [volume, setVolume] = useState(55);
-  const [prediction, setPrediction] = useState("");
-
-  const current = CASES[caseKey];
-  const graphType = current.graphType;
-
-  const switchCase = (key) => {
-    setCaseKey(key);
-    setShowGraph(false);
-    setShowHint(false);
-    setPrediction("");
-    setVolume(55);
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-100 p-6 md:p-10">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
-          <h1 className="text-3xl font-bold text-slate-800">Recurso digital alternativo · Guía 3</h1>
-          <p className="mt-3 max-w-4xl leading-7 text-slate-600">
-            Simulador web para analizar la covariación entre altura y volumen sin realidad aumentada.
-            Primero se predice la forma de la gráfica; después se revela y se compara entre tres recipientes.
-          </p>
+    <div class="layout">
+      <section class="main-card">
+        <div class="row" id="caseButtons">
+          <button class="btn active" data-case="recto">Recipiente recto</button>
+          <button class="btn" data-case="ensancha">Se ensancha</button>
+          <button class="btn" data-case="angosta">Se angosta</button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
-            <div className="flex flex-wrap gap-3 mb-6">
-              <Button active={caseKey === "recto"} onClick={() => switchCase("recto")}>Recipiente recto</Button>
-              <Button active={caseKey === "ensancha"} onClick={() => switchCase("ensancha")}>Se ensancha</Button>
-              <Button active={caseKey === "angosta"} onClick={() => switchCase("angosta")}>Se angosta</Button>
+        <div class="grid">
+          <div class="panel">
+            <h2>Representación del recipiente</h2>
+            <div class="surface" id="vesselSurface">
+              <svg id="vesselSvg" viewBox="0 0 240 320" width="100%" height="100%" aria-label="recipiente"></svg>
             </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="rounded-3xl border border-slate-200 p-5">
-                <h2 className="text-lg font-semibold text-slate-800 mb-4">Representación del recipiente</h2>
-                <div className="h-80 rounded-2xl bg-slate-50 flex items-center justify-center">
-                  <Vessel type={caseKey} volume={volume} />
-                </div>
-                <div className="mt-5">
-                  <div className="flex items-center justify-between text-sm text-slate-700 mb-2">
-                    <span className="font-medium">Volumen</span>
-                    <span>{volume}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={volume}
-                    onChange={(e) => setVolume(Number(e.target.value))}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-3xl border border-slate-200 p-5">
-                <h2 className="text-lg font-semibold text-slate-800 mb-4">Gráfica h(V)</h2>
-                <Graph type={graphType} visible={showGraph} volume={volume} prediction={prediction} />
-                <div className="mt-5 flex flex-wrap gap-3">
-                  <Button secondary active={false} onClick={() => setShowGraph((v) => !v)}>
-                    {showGraph ? "Ocultar gráfica" : "Mostrar gráfica"}
-                  </Button>
-                  <Button active={showHint} onClick={() => setShowHint((v) => !v)}>
-                    {showHint ? "Ocultar pista" : "Ver pista"}
-                  </Button>
-                  <Button active={false} onClick={() => { setVolume(55); setShowGraph(false); setShowHint(false); setPrediction(""); }}>
-                    Reiniciar
-                  </Button>
-                </div>
-              </div>
+            <div class="control">
+              <div class="label-line"><span><strong>Volumen</strong></span><span id="volValue">55</span></div>
+              <input id="volumeSlider" type="range" min="0" max="100" value="55" />
             </div>
           </div>
 
-          <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200 space-y-5">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-800">Secuencia didáctica</h2>
-              <div className="mt-3 space-y-3 text-slate-600 leading-7">
-                <p><span className="font-semibold text-slate-800">1.</span> Observa la forma del recipiente.</p>
-                <p><span className="font-semibold text-slate-800">2.</span> Elige una predicción sobre la gráfica.</p>
-                <p><span className="font-semibold text-slate-800">3.</span> Usa el deslizador para explorar el cambio.</p>
-                <p><span className="font-semibold text-slate-800">4.</span> Revela la gráfica y compara.</p>
-                <p><span className="font-semibold text-slate-800">5.</span> Cambia de recipiente y justifica diferencias.</p>
-              </div>
+          <div class="panel">
+            <h2>Gráfica h(V)</h2>
+            <div class="surface" id="graphSurface">
+              <svg id="graphSvg" viewBox="0 0 300 230" width="100%" height="100%" aria-label="gráfica"></svg>
             </div>
-
-            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
-              <h3 className="font-semibold text-slate-800">Caso actual</h3>
-              <p className="mt-2 text-slate-600 leading-7">{current.label}</p>
-            </div>
-
-            <div className="rounded-2xl bg-emerald-50 p-4 border border-emerald-100">
-              <h3 className="font-semibold text-slate-800">Predicción del estudiante</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <PredictionButton active={prediction === "lineal"} onClick={() => setPrediction("lineal")}>Lineal</PredictionButton>
-                <PredictionButton active={prediction === "aplana"} onClick={() => setPrediction("aplana")}>Se aplana</PredictionButton>
-                <PredictionButton active={prediction === "empina"} onClick={() => setPrediction("empina")}>Se empina</PredictionButton>
-              </div>
-              <p className="mt-3 text-slate-600 leading-7 text-sm">
-                Aquí realiza su predicción antes de pulsar “Mostrar gráfica”.
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">
-              <h3 className="font-semibold text-slate-800">Pregunta guía</h3>
-              <p className="mt-2 text-slate-600 leading-7">
-                ¿La altura aumenta siempre al mismo ritmo cuando el volumen aumenta?
-              </p>
-            </div>
-
-            <div className={`rounded-2xl p-4 border min-h-[124px] ${showHint ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}>
-              <h3 className="font-semibold text-slate-800">Pista o explicación</h3>
-              <p className="mt-2 text-slate-600 leading-7">
-                {showHint ? current.hint : current.explanation}
-              </p>
+            <div class="row" style="margin-top:14px">
+              <button class="btn secondary" id="toggleGraphBtn">Mostrar gráfica</button>
+              <button class="btn" id="toggleHintBtn">Ver pista</button>
+              <button class="btn" id="resetBtn">Reiniciar</button>
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <aside class="side-card">
+        <div class="block">
+          <h3>Secuencia didáctica</h3>
+          <ul>
+            <li>Observa la forma del recipiente.</li>
+            <li>Elige una predicción sobre la gráfica.</li>
+            <li>Usa el deslizador para explorar.</li>
+            <li>Revela la gráfica y compara.</li>
+            <li>Cambia de recipiente y justifica diferencias.</li>
+          </ul>
+        </div>
+
+        <div class="block">
+          <h3>Caso actual</h3>
+          <p><span class="case-tag" id="caseLabel">Recipiente recto</span></p>
+        </div>
+
+        <div class="block accent">
+          <h3>Predicción del estudiante</h3>
+          <div class="prediction-box">
+            <button class="btn pred" data-pred="lineal">Lineal</button>
+            <button class="btn pred" data-pred="aplana">Se aplana</button>
+            <button class="btn pred" data-pred="empina">Se empina</button>
+          </div>
+          <p class="caption">Aquí marca su predicción antes de pulsar “Mostrar gráfica”.</p>
+        </div>
+
+        <div class="block" id="hintBlock">
+          <h3>Pista o explicación</h3>
+          <p id="hintText">Aquí conviene preguntar si la altura sube siempre igual. Antes de revelar la gráfica, formula una predicción.</p>
+        </div>
+
+        <div class="block">
+          <h3>Pregunta guía</h3>
+          <p class="graph-note">¿La altura aumenta siempre al mismo ritmo cuando el volumen aumenta?</p>
+        </div>
+      </aside>
     </div>
-  );
-}
+  </div>
+
+  <script>
+    const CASES = {
+      recto: {
+        label: 'Recipiente recto',
+        explanation: 'Aquí conviene preguntar si la altura sube siempre igual. Antes de revelar la gráfica, formula una predicción.',
+        hint: 'Si el recipiente mantiene el mismo ancho, incrementos iguales de volumen producen incrementos iguales de altura.',
+        graphType: 'line'
+      },
+      ensancha: {
+        label: 'Se ensancha hacia arriba',
+        explanation: 'Observa que en la parte superior el recipiente gana mucho ancho. La gráfica debe diferenciarse con claridad de la lineal.',
+        hint: 'Si el recipiente se hace mucho más ancho arriba, la altura sube cada vez más lentamente y la gráfica se va aplanando con fuerza.',
+        graphType: 'concaveDown'
+      },
+      angosta: {
+        label: 'Se angosta hacia arriba',
+        explanation: 'Observa que en la parte superior el recipiente pierde mucho ancho. La gráfica debe diferenciarse con claridad de la lineal.',
+        hint: 'Si el recipiente se hace mucho más angosto arriba, pequeñas variaciones de volumen producen aumentos cada vez mayores de altura.',
+        graphType: 'concaveUp'
+      }
+    };
+
+    let state = {
+      caseKey: 'recto',
+      volume: 55,
+      showGraph: false,
+      showHint: false,
+      prediction: ''
+    };
+
+    const vesselSvg = document.getElementById('vesselSvg');
+    const graphSvg = document.getElementById('graphSvg');
+    const volValue = document.getElementById('volValue');
+    const caseLabel = document.getElementById('caseLabel');
+    const hintBlock = document.getElementById('hintBlock');
+    const hintText = document.getElementById('hintText');
+    const toggleGraphBtn = document.getElementById('toggleGraphBtn');
+    const toggleHintBtn = document.getElementById('toggleHintBtn');
+    const volumeSlider = document.getElementById('volumeSlider');
+
+    document.querySelectorAll('[data-case]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.caseKey = btn.dataset.case;
+        state.volume = 55;
+        state.showGraph = false;
+        state.showHint = false;
+        state.prediction = '';
+        volumeSlider.value = 55;
+        render();
+      });
+    });
+
+    document.querySelectorAll('[data-pred]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.prediction = btn.dataset.pred;
+        render();
+      });
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      state.volume = 55;
+      state.showGraph = false;
+      state.showHint = false;
+      state.prediction = '';
+      volumeSlider.value = 55;
+      render();
+    });
+
+    toggleGraphBtn.addEventListener('click', () => {
+      state.showGraph = !state.showGraph;
+      render();
+    });
+
+    toggleHintBtn.addEventListener('click', () => {
+      state.showHint = !state.showHint;
+      render();
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+      state.volume = Number(e.target.value);
+      render();
+    });
+
+    function renderVessel() {
+      const type = state.caseKey;
+      const v = state.volume;
+      const h = 18 + v * 1.7;
+
+      let outline = '';
+      let clip = '';
+      let waterX = 58, waterW = 124;
+
+      if (type === 'recto') {
+        outline = 'M70 35 L70 275 L170 275 L170 35';
+        clip = 'M76 35 L76 269 L164 269 L164 35 Z';
+        waterX = 76; waterW = 88;
+      }
+      if (type === 'ensancha') {
+        outline = 'M98 35 L58 275 L182 275 L142 35';
+        clip = 'M95 39 L63 269 L177 269 L145 39 Z';
+        waterX = 56; waterW = 128;
+      }
+      if (type === 'angosta') {
+        outline = 'M52 35 L86 275 L154 275 L188 35';
+        clip = 'M58 39 L90 269 L150 269 L182 39 Z';
+        waterX = 56; waterW = 128;
+      }
+
+      const waterY = 269 - h;
+
+      vesselSvg.innerHTML = `
+        <defs>
+          <clipPath id="vesselClip"><path d="${clip}" /></clipPath>
+        </defs>
+        <rect x="0" y="0" width="240" height="320" rx="20" fill="#f8fafc"></rect>
+        <path d="${outline}" fill="none" stroke="#334155" stroke-width="10" stroke-linecap="round"></path>
+        <rect x="${waterX}" y="${waterY}" width="${waterW}" height="${h}" fill="#38bdf8" opacity="0.8" clip-path="url(#vesselClip)"></rect>
+        <text x="120" y="303" text-anchor="middle" fill="#64748b" font-size="14">El agua sube según la forma del recipiente</text>
+      `;
+    }
+
+    function renderGraph() {
+      const type = CASES[state.caseKey].graphType;
+      const v = state.volume;
+      const x = 55 + v * 1.7;
+      let y;
+      let path;
+
+      if (type === 'line') {
+        path = 'M55 178 L250 52';
+        y = 178 - v * 1.26;
+      } else if (type === 'concaveDown') {
+        path = 'M55 178 C78 100, 172 58, 250 56';
+        y = 180 - Math.sqrt(v + 3) * 18;
+      } else {
+        path = 'M55 179 C150 177, 198 128, 250 52';
+        y = 178 - Math.pow(v / 10, 2.05) * 4.3;
+      }
+
+      const predText = state.prediction === 'lineal'
+        ? 'Predicción elegida: gráfica lineal'
+        : state.prediction === 'aplana'
+        ? 'Predicción elegida: gráfica que se aplana'
+        : state.prediction === 'empina'
+        ? 'Predicción elegida: gráfica que se empina'
+        : 'Predice primero la forma de la gráfica';
+
+      graphSvg.innerHTML = `
+        <rect x="0" y="0" width="300" height="230" rx="20" fill="#f8fafc"></rect>
+        <line x1="40" y1="185" x2="40" y2="20" stroke="#334155" stroke-width="3"></line>
+        <line x1="40" y1="185" x2="275" y2="185" stroke="#334155" stroke-width="3"></line>
+        <text x="18" y="28" fill="#334155" font-size="18" font-weight="700">h</text>
+        <text x="281" y="205" fill="#334155" font-size="18" font-weight="700">V</text>
+        ${state.showGraph ? `
+          <path d="${path}" fill="none" stroke="#2563eb" stroke-width="5" stroke-linecap="round"></path>
+          <circle cx="${x}" cy="${y}" r="6" fill="#0f172a"></circle>
+          <line x1="${x}" y1="${y}" x2="${x}" y2="185" stroke="#94a3b8" stroke-dasharray="5 5"></line>
+          <line x1="40" y1="${y}" x2="${x}" y2="${y}" stroke="#94a3b8" stroke-dasharray="5 5"></line>
+        ` : `
+          <text x="84" y="94" fill="#94a3b8" font-size="16" font-weight="600">${predText}</text>
+          <text x="80" y="122" fill="#94a3b8" font-size="14">Luego pulsa “Mostrar gráfica”</text>
+        `}
+      `;
+    }
+
+    function renderMeta() {
+      const current = CASES[state.caseKey];
+      volValue.textContent = state.volume;
+      caseLabel.textContent = current.label;
+      hintText.textContent = state.showHint ? current.hint : current.explanation;
+      hintBlock.className = state.showHint ? 'block warning' : 'block';
+      toggleGraphBtn.textContent = state.showGraph ? 'Ocultar gráfica' : 'Mostrar gráfica';
+      toggleHintBtn.textContent = state.showHint ? 'Ocultar pista' : 'Ver pista';
+
+      document.querySelectorAll('[data-case]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.case === state.caseKey);
+      });
+      document.querySelectorAll('[data-pred]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.pred === state.prediction);
+      });
+    }
+
+    function render() {
+      renderVessel();
+      renderGraph();
+      renderMeta();
+    }
+
+    render();
+  </script>
+</body>
+</html>
