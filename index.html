@@ -1,418 +1,325 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8" />
-  <title>Guía 3 · Covariación altura-volumen</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+import React, { useMemo, useState } from "react";
 
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+const CASES = {
+  recto: {
+    label: "Recipiente recto",
+    hint: "Si el recipiente mantiene el mismo ancho, incrementos iguales de volumen producen incrementos iguales de altura.",
+    explanation:
+      "Aquí conviene preguntar si la altura sube siempre igual. Antes de revelar la gráfica, formula una predicción.",
+    graphType: "line",
+  },
+  ensancha: {
+    label: "Se ensancha hacia arriba",
+    hint: "Si el recipiente se hace mucho más ancho arriba, la altura sube cada vez más lentamente y la gráfica se va aplanando con fuerza.",
+    explanation:
+      "Observa que en la parte superior el recipiente gana ancho. Eso debe notarse en una gráfica claramente diferente de la lineal.",
+    graphType: "concaveDown",
+  },
+  angosta: {
+    label: "Se angosta hacia arriba",
+    hint: "Si el recipiente se hace mucho más angosto arriba, pequeñas variaciones de volumen producen aumentos cada vez mayores de altura.",
+    explanation:
+      "Observa que en la parte superior el recipiente pierde ancho. Eso debe notarse en una gráfica claramente más empinada al final.",
+    graphType: "concaveUp",
+  },
+};
 
-  <style>
-    body{
-      margin:0;
-      overflow:hidden;
-      font-family: Arial, sans-serif;
-      background:#000;
-    }
+function Button({ active, children, onClick, secondary = false }) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        "rounded-2xl px-4 py-2.5 text-sm font-semibold transition-all",
+        active
+          ? "bg-blue-600 text-white shadow"
+          : secondary
+          ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
+          : "bg-slate-200 text-slate-700 hover:bg-slate-300",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
 
-    .panel-top{
-      position:fixed;
-      top:12px;
-      left:12px;
-      right:12px;
-      z-index:20;
-      background:rgba(255,255,255,0.95);
-      border-radius:18px;
-      padding:16px 18px;
-      box-shadow:0 8px 24px rgba(0,0,0,0.18);
-    }
+function PredictionButton({ active, children, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        "rounded-2xl px-3 py-2 text-sm font-semibold transition-all border",
+        active
+          ? "bg-emerald-600 text-white border-emerald-600"
+          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50",
+      ].join(" ")}
+    >
+      {children}
+    </button>
+  );
+}
 
-    .panel-top h1{
-      margin:0 0 8px 0;
-      font-size:18px;
-      color:#1f2937;
-    }
+function Vessel({ type, volume }) {
+  const level = 12 + volume * 1.7;
 
-    .panel-top p{
-      margin:0;
-      font-size:14px;
-      line-height:1.4;
-      color:#4b5563;
-    }
+  if (type === "recto") {
+    return (
+      <div className="relative h-72 w-32 mx-auto">
+        <svg viewBox="0 0 140 260" className="h-full w-full overflow-visible">
+          <path
+            d="M35 20 L35 220 L105 220 L105 20"
+            fill="none"
+            stroke="#334155"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          <clipPath id="clip-recto">
+            <path d="M39 20 L39 216 L101 216 L101 20 Z" />
+          </clipPath>
+          <rect
+            x="39"
+            y={216 - level}
+            width="62"
+            height={level}
+            fill="#38bdf8"
+            opacity="0.8"
+            clipPath="url(#clip-recto)"
+          />
+        </svg>
+      </div>
+    );
+  }
 
-    .estado{
-      margin-top:8px;
-      font-size:13px;
-      color:#374151;
-    }
+  if (type === "ensancha") {
+    return (
+      <div className="relative h-72 w-44 mx-auto">
+        <svg viewBox="0 0 180 260" className="h-full w-full overflow-visible">
+          <path
+            d="M84 25 L54 220 L126 220 L96 25"
+            fill="none"
+            stroke="#334155"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          <clipPath id="clip-ensancha">
+            <path d="M82 25 L58 216 L122 216 L98 25 Z" />
+          </clipPath>
+          <rect
+            x="46"
+            y={216 - level}
+            width="92"
+            height={level}
+            fill="#38bdf8"
+            opacity="0.8"
+            clipPath="url(#clip-ensancha)"
+          />
+        </svg>
+      </div>
+    );
+  }
 
-    .ok{
-      color:#0a7a2f;
-      font-weight:700;
-    }
-
-    .no{
-      color:#b42318;
-      font-weight:700;
-    }
-
-    .panel-bottom{
-      position:fixed;
-      left:12px;
-      right:12px;
-      bottom:12px;
-      z-index:20;
-      background:rgba(255,255,255,0.95);
-      border-radius:18px;
-      padding:14px 14px 12px 14px;
-      box-shadow:0 8px 24px rgba(0,0,0,0.18);
-    }
-
-    .pregunta{
-      font-size:14px;
-      line-height:1.35;
-      color:#1f2937;
-      margin-bottom:12px;
-    }
-
-    .fila{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-bottom:10px;
-    }
-
-    button{
-      border:none;
-      border-radius:16px;
-      padding:12px 16px;
-      font-size:14px;
-      font-weight:700;
-      cursor:pointer;
-      background:#e9eef5;
-      color:#1f2937;
-      box-shadow: inset 0 0 0 1px rgba(31,41,55,0.12);
-    }
-
-    button.activo{
-      background:#2f7de1;
-      color:#fff;
-      box-shadow:none;
-    }
-
-    button.secundario{
-      background:#dce9fb;
-      color:#134b9b;
-    }
-
-    .texto-aux{
-      font-size:13px;
-      line-height:1.35;
-      color:#4b5563;
-      min-height:18px;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="panel-top">
-    <h1>Guía 3 · Covariación altura-volumen</h1>
-    <p>
-      Apunta la cámara al marcador Hiro. Observa el recipiente, piensa cómo cambia la altura
-      cuando aumenta el volumen y luego revela la gráfica para comparar tu predicción.
-    </p>
-    <div class="estado">
-      Estado del marcador:
-      <span id="estado" class="no">no detectado</span>
+  return (
+    <div className="relative h-72 w-40 mx-auto">
+      <svg viewBox="0 0 180 260" className="h-full w-full overflow-visible">
+        <path
+          d="M48 25 L72 220 L108 220 L132 25"
+          fill="none"
+          stroke="#334155"
+          strokeWidth="8"
+          strokeLinecap="round"
+        />
+        <clipPath id="clip-angosta">
+          <path d="M52 25 L74 216 L106 216 L128 25 Z" />
+        </clipPath>
+        <rect
+          x="46"
+          y={216 - level}
+          width="88"
+          height={level}
+          fill="#38bdf8"
+          opacity="0.8"
+          clipPath="url(#clip-angosta)"
+        />
+      </svg>
     </div>
-  </div>
+  );
+}
 
-  <div class="panel-bottom">
-    <div class="pregunta">
-      <strong>Pregunta guía:</strong>
-      ¿la altura <em>h</em> aumenta siempre al mismo ritmo cuando aumenta el volumen <em>V</em>?
+function Graph({ type, visible, volume, prediction }) {
+  const point = useMemo(() => {
+    const x = 55 + volume * 1.6;
+    let y = 0;
+    if (type === "line") y = 175 - volume * 1.2;
+    if (type === "concaveDown") y = 180 - Math.sqrt(volume + 3) * 18;
+    if (type === "concaveUp") y = 178 - Math.pow(volume / 10, 2.05) * 4.3;
+    return { x, y };
+  }, [type, volume]);
+
+  const linePath = "M55 175 L245 55";
+  const downPath = "M55 175 C80 105, 170 62, 245 58";
+  const upPath = "M55 176 C148 174, 195 132, 245 55";
+  const path = type === "line" ? linePath : type === "concaveDown" ? downPath : upPath;
+
+  const predictionText =
+    prediction === "lineal"
+      ? "Predicción elegida: gráfica lineal"
+      : prediction === "aplana"
+      ? "Predicción elegida: gráfica que se aplana"
+      : prediction === "empina"
+      ? "Predicción elegida: gráfica que se empina"
+      : "Predice primero la forma de la gráfica";
+
+  return (
+    <div className="h-72 rounded-2xl bg-slate-50 p-4">
+      <svg viewBox="0 0 300 220" className="h-full w-full">
+        <line x1="40" y1="180" x2="40" y2="20" stroke="#334155" strokeWidth="3" />
+        <line x1="40" y1="180" x2="270" y2="180" stroke="#334155" strokeWidth="3" />
+        <text x="18" y="28" className="fill-slate-700 text-[18px] font-semibold">h</text>
+        <text x="275" y="198" className="fill-slate-700 text-[18px] font-semibold">V</text>
+
+        {visible ? (
+          <>
+            <path d={path} fill="none" stroke="#2563eb" strokeWidth="5" strokeLinecap="round" />
+            <circle cx={point.x} cy={point.y} r="6" fill="#0f172a" />
+            <line x1={point.x} y1={point.y} x2={point.x} y2="180" stroke="#94a3b8" strokeDasharray="5 5" />
+            <line x1="40" y1={point.y} x2={point.x} y2={point.y} stroke="#94a3b8" strokeDasharray="5 5" />
+          </>
+        ) : (
+          <>
+            <text x="78" y="92" className="fill-slate-400 text-[16px] font-medium">
+              {predictionText}
+            </text>
+            <text x="74" y="120" className="fill-slate-400 text-[14px]">
+              Luego pulsa “Mostrar gráfica”
+            </text>
+          </>
+        )}
+      </svg>
     </div>
+  );
+}
 
-    <div class="fila">
-      <button id="btnRecto" class="activo">Recto</button>
-      <button id="btnEnsancha">Se ensancha</button>
-      <button id="btnAngosta">Se angosta</button>
+export default function RecursoDigitalGuia3() {
+  const [caseKey, setCaseKey] = useState("recto");
+  const [showGraph, setShowGraph] = useState(false);
+  const [showHint, setShowHint] = useState(false);
+  const [volume, setVolume] = useState(55);
+  const [prediction, setPrediction] = useState("");
+
+  const current = CASES[caseKey];
+  const graphType = current.graphType;
+
+  const switchCase = (key) => {
+    setCaseKey(key);
+    setShowGraph(false);
+    setShowHint(false);
+    setPrediction("");
+    setVolume(55);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-6 md:p-10">
+      <div className="mx-auto max-w-6xl space-y-6">
+        <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+          <h1 className="text-3xl font-bold text-slate-800">Recurso digital alternativo · Guía 3</h1>
+          <p className="mt-3 max-w-4xl leading-7 text-slate-600">
+            Simulador web para analizar la covariación entre altura y volumen sin realidad aumentada.
+            Primero se predice la forma de la gráfica; después se revela y se compara entre tres recipientes.
+          </p>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 rounded-3xl bg-white p-6 shadow-sm border border-slate-200">
+            <div className="flex flex-wrap gap-3 mb-6">
+              <Button active={caseKey === "recto"} onClick={() => switchCase("recto")}>Recipiente recto</Button>
+              <Button active={caseKey === "ensancha"} onClick={() => switchCase("ensancha")}>Se ensancha</Button>
+              <Button active={caseKey === "angosta"} onClick={() => switchCase("angosta")}>Se angosta</Button>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="rounded-3xl border border-slate-200 p-5">
+                <h2 className="text-lg font-semibold text-slate-800 mb-4">Representación del recipiente</h2>
+                <div className="h-80 rounded-2xl bg-slate-50 flex items-center justify-center">
+                  <Vessel type={caseKey} volume={volume} />
+                </div>
+                <div className="mt-5">
+                  <div className="flex items-center justify-between text-sm text-slate-700 mb-2">
+                    <span className="font-medium">Volumen</span>
+                    <span>{volume}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={volume}
+                    onChange={(e) => setVolume(Number(e.target.value))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-200 p-5">
+                <h2 className="text-lg font-semibold text-slate-800 mb-4">Gráfica h(V)</h2>
+                <Graph type={graphType} visible={showGraph} volume={volume} prediction={prediction} />
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Button secondary active={false} onClick={() => setShowGraph((v) => !v)}>
+                    {showGraph ? "Ocultar gráfica" : "Mostrar gráfica"}
+                  </Button>
+                  <Button active={showHint} onClick={() => setShowHint((v) => !v)}>
+                    {showHint ? "Ocultar pista" : "Ver pista"}
+                  </Button>
+                  <Button active={false} onClick={() => { setVolume(55); setShowGraph(false); setShowHint(false); setPrediction(""); }}>
+                    Reiniciar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-3xl bg-white p-6 shadow-sm border border-slate-200 space-y-5">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-800">Secuencia didáctica</h2>
+              <div className="mt-3 space-y-3 text-slate-600 leading-7">
+                <p><span className="font-semibold text-slate-800">1.</span> Observa la forma del recipiente.</p>
+                <p><span className="font-semibold text-slate-800">2.</span> Elige una predicción sobre la gráfica.</p>
+                <p><span className="font-semibold text-slate-800">3.</span> Usa el deslizador para explorar el cambio.</p>
+                <p><span className="font-semibold text-slate-800">4.</span> Revela la gráfica y compara.</p>
+                <p><span className="font-semibold text-slate-800">5.</span> Cambia de recipiente y justifica diferencias.</p>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 p-4 border border-slate-200">
+              <h3 className="font-semibold text-slate-800">Caso actual</h3>
+              <p className="mt-2 text-slate-600 leading-7">{current.label}</p>
+            </div>
+
+            <div className="rounded-2xl bg-emerald-50 p-4 border border-emerald-100">
+              <h3 className="font-semibold text-slate-800">Predicción del estudiante</h3>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <PredictionButton active={prediction === "lineal"} onClick={() => setPrediction("lineal")}>Lineal</PredictionButton>
+                <PredictionButton active={prediction === "aplana"} onClick={() => setPrediction("aplana")}>Se aplana</PredictionButton>
+                <PredictionButton active={prediction === "empina"} onClick={() => setPrediction("empina")}>Se empina</PredictionButton>
+              </div>
+              <p className="mt-3 text-slate-600 leading-7 text-sm">
+                Aquí realiza su predicción antes de pulsar “Mostrar gráfica”.
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-blue-50 p-4 border border-blue-100">
+              <h3 className="font-semibold text-slate-800">Pregunta guía</h3>
+              <p className="mt-2 text-slate-600 leading-7">
+                ¿La altura aumenta siempre al mismo ritmo cuando el volumen aumenta?
+              </p>
+            </div>
+
+            <div className={`rounded-2xl p-4 border min-h-[124px] ${showHint ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200"}`}>
+              <h3 className="font-semibold text-slate-800">Pista o explicación</h3>
+              <p className="mt-2 text-slate-600 leading-7">
+                {showHint ? current.hint : current.explanation}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-
-    <div class="fila">
-      <button id="btnGrafica" class="secundario">Mostrar gráfica</button>
-      <button id="btnPista">Ver pista</button>
-    </div>
-
-    <div id="textoAux" class="texto-aux">
-      Primero predice: ¿la altura sube siempre igual o cambia su ritmo?
-    </div>
-  </div>
-
-  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
-    <a-marker id="hiroMarker" preset="hiro">
-
-      <!-- Panel general -->
-      <a-plane
-        position="0 0.75 0"
-        width="2.0"
-        height="1.25"
-        color="#ffffff"
-        opacity="0.95">
-      </a-plane>
-
-      <!-- Título interno -->
-      <a-text
-        value="Relacion entre recipiente y grafica h(V)"
-        position="0 1.24 0.02"
-        align="center"
-        color="#1f2937"
-        width="3.2">
-      </a-text>
-
-      <!-- Etiquetas -->
-      <a-text
-        value="recipiente"
-        position="-0.52 0.22 0.02"
-        align="center"
-        color="#4b5563"
-        width="1.2">
-      </a-text>
-
-      <a-text
-        value="grafica"
-        position="0.48 0.22 0.02"
-        align="center"
-        color="#4b5563"
-        width="1.2">
-      </a-text>
-
-      <!-- ========================= -->
-      <!-- CASO 1: RECTO -->
-      <!-- ========================= -->
-      <a-entity id="caseRecto">
-
-        <!-- recipiente -->
-        <a-box position="-0.55 0.70 0.03" width="0.02" height="0.42" depth="0.01" color="#111827"></a-box>
-        <a-box position="-0.37 0.70 0.03" width="0.02" height="0.42" depth="0.01" color="#111827"></a-box>
-        <a-box position="-0.46 0.50 0.03" width="0.20" height="0.02" depth="0.01" color="#111827"></a-box>
-
-        <!-- agua -->
-        <a-box
-          position="-0.46 0.63 0.035"
-          width="0.15"
-          height="0.22"
-          depth="0.008"
-          color="#4fc3f7"
-          opacity="0.90"
-          animation="property: height; dir: alternate; dur: 2500; loop: true; to: 0.34"
-          animation__pos="property: position; dir: alternate; dur: 2500; loop: true; to: -0.46 0.69 0.035">
-        </a-box>
-
-        <!-- ejes -->
-        <a-box position="0.28 0.68 0.03" width="0.01" height="0.34" depth="0.01" color="#111827"></a-box>
-        <a-box position="0.39 0.51 0.03" width="0.23" height="0.01" depth="0.01" color="#111827"></a-box>
-        <a-text value="h" position="0.22 0.87 0.03" color="#111827" width="0.6"></a-text>
-        <a-text value="V" position="0.53 0.44 0.03" color="#111827" width="0.6"></a-text>
-
-        <!-- gráfica recta -->
-        <a-entity id="graphRecto" visible="false">
-          <a-box position="0.42 0.64 0.035" width="0.24" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 35"></a-box>
-        </a-entity>
-
-      </a-entity>
-
-      <!-- ========================= -->
-      <!-- CASO 2: SE ENSANCHA -->
-      <!-- ========================= -->
-      <a-entity id="caseEnsancha" visible="false">
-
-        <!-- recipiente -->
-        <a-box position="-0.56 0.72 0.03" width="0.02" height="0.40" depth="0.01" color="#111827" rotation="0 0 -18"></a-box>
-        <a-box position="-0.36 0.72 0.03" width="0.02" height="0.40" depth="0.01" color="#111827" rotation="0 0 18"></a-box>
-        <a-box position="-0.46 0.50 0.03" width="0.16" height="0.02" depth="0.01" color="#111827"></a-box>
-
-        <!-- agua -->
-        <a-box
-          position="-0.46 0.61 0.035"
-          width="0.12"
-          height="0.18"
-          depth="0.008"
-          color="#4fc3f7"
-          opacity="0.90"
-          animation="property: height; dir: alternate; dur: 2500; loop: true; to: 0.28"
-          animation__pos="property: position; dir: alternate; dur: 2500; loop: true; to: -0.46 0.66 0.035">
-        </a-box>
-
-        <!-- ejes -->
-        <a-box position="0.28 0.68 0.03" width="0.01" height="0.34" depth="0.01" color="#111827"></a-box>
-        <a-box position="0.39 0.51 0.03" width="0.23" height="0.01" depth="0.01" color="#111827"></a-box>
-        <a-text value="h" position="0.22 0.87 0.03" color="#111827" width="0.6"></a-text>
-        <a-text value="V" position="0.53 0.44 0.03" color="#111827" width="0.6"></a-text>
-
-        <!-- gráfica que se aplana -->
-        <a-entity id="graphEnsancha" visible="false">
-          <a-box position="0.34 0.59 0.035" width="0.10" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 55"></a-box>
-          <a-box position="0.44 0.67 0.035" width="0.10" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 30"></a-box>
-          <a-box position="0.52 0.72 0.035" width="0.08" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 12"></a-box>
-        </a-entity>
-
-      </a-entity>
-
-      <!-- ========================= -->
-      <!-- CASO 3: SE ANGOSTA -->
-      <!-- ========================= -->
-      <a-entity id="caseAngosta" visible="false">
-
-        <!-- recipiente -->
-        <a-box position="-0.55 0.72 0.03" width="0.02" height="0.40" depth="0.01" color="#111827" rotation="0 0 18"></a-box>
-        <a-box position="-0.37 0.72 0.03" width="0.02" height="0.40" depth="0.01" color="#111827" rotation="0 0 -18"></a-box>
-        <a-box position="-0.46 0.50 0.03" width="0.24" height="0.02" depth="0.01" color="#111827"></a-box>
-
-        <!-- agua -->
-        <a-box
-          position="-0.46 0.61 0.035"
-          width="0.18"
-          height="0.18"
-          depth="0.008"
-          color="#4fc3f7"
-          opacity="0.90"
-          animation="property: height; dir: alternate; dur: 2500; loop: true; to: 0.32"
-          animation__pos="property: position; dir: alternate; dur: 2500; loop: true; to: -0.46 0.68 0.035">
-        </a-box>
-
-        <!-- ejes -->
-        <a-box position="0.28 0.68 0.03" width="0.01" height="0.34" depth="0.01" color="#111827"></a-box>
-        <a-box position="0.39 0.51 0.03" width="0.23" height="0.01" depth="0.01" color="#111827"></a-box>
-        <a-text value="h" position="0.22 0.87 0.03" color="#111827" width="0.6"></a-text>
-        <a-text value="V" position="0.53 0.44 0.03" color="#111827" width="0.6"></a-text>
-
-        <!-- gráfica que se empina -->
-        <a-entity id="graphAngosta" visible="false">
-          <a-box position="0.35 0.57 0.035" width="0.08" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 12"></a-box>
-          <a-box position="0.43 0.63 0.035" width="0.09" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 30"></a-box>
-          <a-box position="0.52 0.74 0.035" width="0.11" height="0.012" depth="0.01" color="#2563eb" rotation="0 0 55"></a-box>
-        </a-entity>
-
-      </a-entity>
-
-    </a-marker>
-
-    <a-entity camera></a-entity>
-  </a-scene>
-
-  <script>
-    const estado = document.getElementById("estado");
-    const textoAux = document.getElementById("textoAux");
-
-    const btnRecto = document.getElementById("btnRecto");
-    const btnEnsancha = document.getElementById("btnEnsancha");
-    const btnAngosta = document.getElementById("btnAngosta");
-    const btnGrafica = document.getElementById("btnGrafica");
-    const btnPista = document.getElementById("btnPista");
-
-    const caseRecto = document.getElementById("caseRecto");
-    const caseEnsancha = document.getElementById("caseEnsancha");
-    const caseAngosta = document.getElementById("caseAngosta");
-
-    const graphRecto = document.getElementById("graphRecto");
-    const graphEnsancha = document.getElementById("graphEnsancha");
-    const graphAngosta = document.getElementById("graphAngosta");
-
-    let casoActual = "recto";
-    let graficaVisible = false;
-    let pistaVisible = false;
-
-    function actualizarBotonesCaso() {
-      btnRecto.classList.toggle("activo", casoActual === "recto");
-      btnEnsancha.classList.toggle("activo", casoActual === "ensancha");
-      btnAngosta.classList.toggle("activo", casoActual === "angosta");
-    }
-
-    function actualizarEscena() {
-      caseRecto.setAttribute("visible", casoActual === "recto");
-      caseEnsancha.setAttribute("visible", casoActual === "ensancha");
-      caseAngosta.setAttribute("visible", casoActual === "angosta");
-
-      graphRecto.setAttribute("visible", graficaVisible && casoActual === "recto");
-      graphEnsancha.setAttribute("visible", graficaVisible && casoActual === "ensancha");
-      graphAngosta.setAttribute("visible", graficaVisible && casoActual === "angosta");
-    }
-
-    function actualizarTexto() {
-      if (!pistaVisible) {
-        if (!graficaVisible) {
-          textoAux.textContent = "Primero predice: ¿la altura sube siempre igual o cambia su ritmo?";
-        } else {
-          textoAux.textContent = "Compara ahora tu predicción con la gráfica mostrada.";
-        }
-        return;
-      }
-
-      if (casoActual === "recto") {
-        textoAux.textContent = "Pista: si el recipiente mantiene el mismo ancho, la altura aumenta a ritmo constante.";
-      } else if (casoActual === "ensancha") {
-        textoAux.textContent = "Pista: si el recipiente se hace más ancho, la altura sube cada vez más lentamente.";
-      } else {
-        textoAux.textContent = "Pista: si el recipiente se angosta, la altura sube cada vez más rápido.";
-      }
-    }
-
-    btnRecto.addEventListener("click", () => {
-      casoActual = "recto";
-      pistaVisible = false;
-      actualizarBotonesCaso();
-      actualizarEscena();
-      actualizarTexto();
-    });
-
-    btnEnsancha.addEventListener("click", () => {
-      casoActual = "ensancha";
-      pistaVisible = false;
-      actualizarBotonesCaso();
-      actualizarEscena();
-      actualizarTexto();
-    });
-
-    btnAngosta.addEventListener("click", () => {
-      casoActual = "angosta";
-      pistaVisible = false;
-      actualizarBotonesCaso();
-      actualizarEscena();
-      actualizarTexto();
-    });
-
-    btnGrafica.addEventListener("click", () => {
-      graficaVisible = !graficaVisible;
-      btnGrafica.textContent = graficaVisible ? "Ocultar gráfica" : "Mostrar gráfica";
-      actualizarEscena();
-      actualizarTexto();
-    });
-
-    btnPista.addEventListener("click", () => {
-      pistaVisible = !pistaVisible;
-      btnPista.textContent = pistaVisible ? "Ocultar pista" : "Ver pista";
-      actualizarTexto();
-    });
-
-    window.addEventListener("load", function () {
-      const marker = document.querySelector("#hiroMarker");
-
-      marker.addEventListener("markerFound", function () {
-        estado.textContent = "detectado";
-        estado.className = "ok";
-      });
-
-      marker.addEventListener("markerLost", function () {
-        estado.textContent = "no detectado";
-        estado.className = "no";
-      });
-
-      actualizarBotonesCaso();
-      actualizarEscena();
-      actualizarTexto();
-    });
-  </script>
-</body>
-</html>
+  );
+}
